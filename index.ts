@@ -25,6 +25,7 @@ function initialise() {
   password.iterations(parseInt(iterations));
   password.pepper(process.env.HASH_PEPPER);
 
+  app.set("trust proxy", 1);
   app.use(getMiddleware());
   app.use("/auth", authRouter);
 
