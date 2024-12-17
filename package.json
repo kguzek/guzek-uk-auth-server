@@ -7,7 +7,9 @@
     "node": "^22.12.0"
   },
   "scripts": {
-    "dev": "NODE_ENV=development NODE_PORT=5019 nodemon --exec ts-node --files index.ts"
+    "dev": "NODE_ENV=development NODE_PORT=5019 nodemon --exec ts-node --files index.ts",
+    "prod": "NODE_ENV=production NODE_PORT=5019 node dist/index.js",
+    "compile": "rm -r dist; tsc"
   },
   "repository": {
     "type": "git",
