@@ -20,6 +20,7 @@
   },
   "homepage": "https://auth.guzek.uk/",
   "dependencies": {
+    "crypto": "^1.0.1",
     "express": "^4.21.2",
     "guzek-uk-common": "latest",
     "jsonwebtoken": "^9.0.2",

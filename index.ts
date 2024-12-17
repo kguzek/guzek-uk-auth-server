@@ -4,8 +4,9 @@ dotenv.config();
 import password from "s-salt-pepper";
 import { getLogger } from "guzek-uk-common/logger";
 import { getMiddleware } from "guzek-uk-common/middleware";
-import { startServer } from "guzek-uk-common/util";
-import { router } from "./src/routes/auth";
+import { sendOK, startServer } from "guzek-uk-common/util";
+import { router as authRouter } from "./src/route";
+import { getPublicKey } from "./src/keys";
 
 const logger = getLogger(__filename);
 
@@ -25,7 +26,12 @@ function initialise() {
   password.pepper(process.env.HASH_PEPPER);
 
   app.use(getMiddleware());
-  app.use(router);
+  app.use("/auth", authRouter);
+
+  // GET JWKS public key
+  app.get("/.well-known/jwks.json", (_req, res) =>
+    sendOK(res, { keys: [getPublicKey()] })
+  );
 
   startServer(app, PORT);
 }
