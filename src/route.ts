@@ -25,9 +25,14 @@ import { getRefreshSecret } from "./keys";
 export const router = express.Router();
 const logger = getLogger(__filename);
 
-const MODIFIABLE_USER_PROPERTIES = ["username", "email"];
+const MODIFIABLE_USER_PROPERTIES = ["username", "email", "serverUrl"];
 
-const ADMIN_USER_PROPERTIES = ["uuid", "admin", "created_at", "modified_at"];
+const ADMIN_ONLY_USER_PROPERTIES = [
+  "uuid",
+  "admin",
+  "created_at",
+  "modified_at",
+];
 
 // CREATE new account
 router.post("/users", async (req: Request, res: Response) => {
@@ -101,7 +106,7 @@ router.put(
           message: `Protected user property '${property}'.`,
         });
       }
-      if (ADMIN_USER_PROPERTIES.includes(property)) continue;
+      if (ADMIN_ONLY_USER_PROPERTIES.includes(property)) continue;
 
       return sendError(res, 400, {
         message: `Unmodifiable user property '${property}'.`,
