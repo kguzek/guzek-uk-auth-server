@@ -1,7 +1,7 @@
 import express from "express";
-import dotenv from "dotenv";
-dotenv.config();
 import password from "s-salt-pepper";
+import { setupEnvironment } from "guzek-uk-common/setup";
+setupEnvironment();
 import { getLogger } from "guzek-uk-common/logger";
 import { getMiddleware } from "guzek-uk-common/middleware";
 import { sendOK, startServer } from "guzek-uk-common/util";

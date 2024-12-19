@@ -21,7 +21,6 @@ export async function authenticateUser(
   if (!pw) {
     throw Error("Password not provided.");
   }
-
   const records = await queryDatabase(User, { where }, () => {
     const property = Object.keys(where).shift();
     sendError(res, 400, { message: `Invalid ${property}.` });
