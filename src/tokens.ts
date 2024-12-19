@@ -3,7 +3,7 @@ import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
 
 import { UserObj } from "guzek-uk-common/models";
 import { Token, User } from "guzek-uk-common/sequelize";
-import { readDatabaseEntry, sendError, sendOK } from "guzek-uk-common/util";
+import { queryDatabase, sendError, sendOK } from "guzek-uk-common/util";
 
 import password from "s-salt-pepper";
 import { Response } from "express";
@@ -15,15 +15,15 @@ const TOKEN_VALID_FOR_MS = 30 * 60 * 1000; // 30 mins
 /** Authenticate given password against the stored credentials in the database. */
 export async function authenticateUser(
   res: Response,
-  filter: WhereOptions,
+  where: WhereOptions,
   pw: string
 ) {
   if (!pw) {
     throw Error("Password not provided.");
   }
 
-  const records = await readDatabaseEntry(User, res, filter, () => {
-    const property = Object.keys(filter).shift();
+  const records = await queryDatabase(User, { where }, () => {
+    const property = Object.keys(where).shift();
     sendError(res, 400, { message: `Invalid ${property}.` });
   });
   if (!records) return;

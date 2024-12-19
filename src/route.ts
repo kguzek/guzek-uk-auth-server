@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { verify } from "jsonwebtoken";
 import {
   createDatabaseEntry,
-  readDatabaseEntry,
+  queryDatabase,
   updateDatabaseEntry,
   deleteDatabaseEntry,
   sendError,
@@ -44,12 +44,9 @@ router.post("/users", async (req: Request, res: Response) => {
     }
   }
   // Check for existing entries
-  const results = await readDatabaseEntry(
-    User,
-    res,
-    { email: req.body.email },
-    () => null
-  );
+  const results = await queryDatabase(User, {
+    where: { email: req.body.email },
+  });
 
   if (results?.shift()) {
     return sendError(res, 400, {
@@ -63,14 +60,13 @@ router.post("/users", async (req: Request, res: Response) => {
 
   await createDatabaseEntry(
     User,
-    req,
-    res,
     {
       uuid: uuidv4(),
       username: req.body.username,
       email: req.body.email,
       ...credentials,
     },
+    res,
     (_res: Response, record: User) => {
       const { hash, salt, ...userData } = record.get();
       sendNewTokens(res, userData);
@@ -85,13 +81,13 @@ router.get("/users", (_req: Request, res: Response) => {
 
 // READ specific user by search query
 router.get("/users", async (req: Request, res: Response) => {
-  const results = await readDatabaseEntry(User, res, req.query);
+  const results = await queryDatabase(User, { where: req.query }, res);
   if (results) sendOK(res, removeSensitiveData(results)[0]);
 });
 
 // READ specific user by uuid
 router.get("/users/:uuid", async (req: Request, res: Response) => {
-  const results = await readDatabaseEntry(User, res, req.params);
+  const results = await queryDatabase(User, { where: req.params }, res);
   if (results) sendOK(res, removeSensitiveData(results));
 });
 
@@ -206,10 +202,9 @@ router.post("/refresh", async (req: Request, res: Response) => {
 
   const refreshToken = req.body.token;
   if (!refreshToken) return reject("No refresh token provided.");
-  const tokens = await readDatabaseEntry(
+  const tokens = await queryDatabase(
     Token,
-    res,
-    { value: refreshToken },
+    { where: { value: refreshToken } },
     () => {
       reject("The provided refresh token was not issued by this server.");
     }
