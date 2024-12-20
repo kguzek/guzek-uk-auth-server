@@ -18,9 +18,13 @@ import {
 import { CustomRequest, UserObj } from "guzek-uk-common/models";
 import { getLogger } from "guzek-uk-common/logger";
 import password from "s-salt-pepper";
-import { authenticateUser, generateAccessToken, sendNewTokens } from "./tokens";
-import { removeSensitiveData, sendUsers } from "./users";
-import { getRefreshSecret } from "./keys";
+import {
+  authenticateUser,
+  generateAccessToken,
+  sendNewTokens,
+} from "../tokens";
+import { removeSensitiveData, sendUsers } from "../users";
+import { getRefreshSecret } from "../keys";
 
 export const router = express.Router();
 const logger = getLogger(__filename);

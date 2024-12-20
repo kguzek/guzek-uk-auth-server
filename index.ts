@@ -4,18 +4,16 @@ import { setupEnvironment } from "guzek-uk-common/setup";
 setupEnvironment();
 import { getLogger } from "guzek-uk-common/logger";
 import { getMiddleware } from "guzek-uk-common/middleware";
-import { getServerPort, sendOK, startServer } from "guzek-uk-common/util";
-import { router as authRouter } from "./src/route";
-import { getPublicKey } from "./src/keys";
+import { startServer } from "guzek-uk-common/server";
+import { send405 } from "guzek-uk-common/util";
 
 const logger = getLogger(__filename);
 
 const app = express();
 
-function initialise() {
-  const port = getServerPort();
-  if (!port) return;
+const ENDPOINTS = ["auth", ".well-known"];
 
+async function initialise() {
   const iterations = process.env.HASH_ITERATIONS;
   if (!iterations) {
     logger.error("No HASH_ITERATIONS environment variable set.");
@@ -26,14 +24,13 @@ function initialise() {
   password.pepper(process.env.HASH_PEPPER);
 
   app.use(getMiddleware());
-  app.use("/auth", authRouter);
+  for (const endpoint of ENDPOINTS) {
+    const middleware = await import("./src/routes/" + endpoint);
+    if (middleware.init) middleware.init(ENDPOINTS);
+    app.use(`/${endpoint}`, middleware.router, send405);
+  }
 
-  // GET JWKS public key
-  app.get("/.well-known/jwks.json", (_req, res) =>
-    sendOK(res, { keys: [getPublicKey()] })
-  );
-
-  startServer(app, port);
+  startServer(app, ENDPOINTS);
 }
 
 initialise();
