@@ -4,7 +4,7 @@ import { setupEnvironment } from "guzek-uk-common/setup";
 setupEnvironment();
 import { getLogger } from "guzek-uk-common/logger";
 import { getMiddleware } from "guzek-uk-common/middleware";
-import { sendOK, startServer } from "guzek-uk-common/util";
+import { getServerPort, sendOK, startServer } from "guzek-uk-common/util";
 import { router as authRouter } from "./src/route";
 import { getPublicKey } from "./src/keys";
 
@@ -16,6 +16,9 @@ const app = express();
 const PORT = process.env.NODE_PORT;
 
 function initialise() {
+  const port = getServerPort();
+  if (!port) return;
+
   const iterations = process.env.HASH_ITERATIONS;
   if (!iterations) {
     logger.error("No HASH_ITERATIONS environment variable set.");
@@ -34,11 +37,7 @@ function initialise() {
     sendOK(res, { keys: [getPublicKey()] })
   );
 
-  startServer(app, PORT);
+  startServer(app, port);
 }
 
-if (PORT) {
-  initialise();
-} else {
-  logger.error("No server port environment variable set.");
-}
+initialise();
