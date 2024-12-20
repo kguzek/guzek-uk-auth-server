@@ -30,7 +30,7 @@ async function initialise() {
     app.use(`/${endpoint}`, middleware.router, send405);
   }
 
-  startServer(app, ENDPOINTS);
+  startServer(app);
 }
 
 initialise();
