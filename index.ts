@@ -12,9 +12,6 @@ const logger = getLogger(__filename);
 
 const app = express();
 
-// Determine the server port
-const PORT = process.env.NODE_PORT;
-
 function initialise() {
   const port = getServerPort();
   if (!port) return;
@@ -28,7 +25,6 @@ function initialise() {
   password.iterations(parseInt(iterations));
   password.pepper(process.env.HASH_PEPPER);
 
-  app.set("trust proxy", 1);
   app.use(getMiddleware());
   app.use("/auth", authRouter);
 
