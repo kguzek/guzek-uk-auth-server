@@ -40,14 +40,17 @@ function setCookie(
 export function clearTokenCookies(res: Response) {
   setCookie(res, "access_token");
   setCookie(res, "refresh_token");
+  setCookie(res, "user");
 }
 
 /** Set the access and refresh tokens as HTTP-only cookies in the response. */
 export function setTokenCookies(
+  user: UserObj,
   res: Response,
   accessToken: string,
   refreshToken?: string
 ) {
+  setCookie(res, "user", JSON.stringify(user), TOKEN_VALID_FOR_MS);
   setCookie(res, "access_token", accessToken, TOKEN_VALID_FOR_MS);
   if (!refreshToken) return;
   setCookie(res, "refresh_token", refreshToken, REFRESH_TOKEN_VALID_FOR_MS);
@@ -92,6 +95,6 @@ export function sendNewTokens(res: Response, user: UserObj) {
   const accessToken = generateAccessToken(user);
   const refreshToken = jwt.sign(user, getRefreshSecret());
   Token.create({ value: refreshToken }).then();
-  setTokenCookies(res, accessToken.accessToken, refreshToken);
+  setTokenCookies(user, res, accessToken.accessToken, refreshToken);
   sendOK(res, { ...user, ...accessToken, refreshToken }, 201);
 }

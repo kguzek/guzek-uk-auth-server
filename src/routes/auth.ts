@@ -239,10 +239,11 @@ router.post("/refresh", async (req: Request, res: Response) => {
     }
   );
   if (!tokens) return;
-  verify(refreshToken as string, getRefreshSecret(), (err, user) => {
+  verify(refreshToken as string, getRefreshSecret(), (err, payload) => {
     if (err) return reject("Invalid or expired refresh token.");
-    const accessToken = generateAccessToken(user as UserObj);
-    setTokenCookies(res, accessToken.accessToken);
+    const user = payload as UserObj;
+    const accessToken = generateAccessToken(user);
+    setTokenCookies(user, res, accessToken.accessToken);
     sendOK(res, accessToken, 201);
   });
 });
