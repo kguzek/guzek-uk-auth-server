@@ -26,6 +26,7 @@ function setCookie(
     sameSite: "none",
     maxAge,
     path: "/",
+    domain: process.env.COOKIE_DOMAIN || "guzek.uk",
   };
   if (value && maxAge) {
     res.cookie(name, value, options);
