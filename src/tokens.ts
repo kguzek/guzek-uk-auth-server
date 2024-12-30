@@ -22,7 +22,7 @@ function setCookie(
 ) {
   const options: CookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV !== "development",
+    secure: true,
     sameSite: "none",
     maxAge,
     path: "/",

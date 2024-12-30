@@ -80,6 +80,15 @@ router.post("/users", async (req: Request, res: Response) => {
   );
 });
 
+// READ currently authenticated user
+router.get("/users/me", (req: CustomRequest, res: Response) => {
+  req.user
+    ? sendOK(res, req.user)
+    : sendError(res, 401, {
+        message: "You must be logged in to access your user details.",
+      });
+});
+
 // READ all users
 router.get("/users", (_req: Request, res: Response) => {
   sendUsers(res, false);

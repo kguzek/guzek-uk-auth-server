@@ -12,7 +12,8 @@
   "scripts": {
     "dev": "NODE_ENV=development NODE_PORT=5019 nodemon --exec ts-node --files index.ts",
     "prod": "NODE_ENV=production NODE_PORT=5019 node dist/index.js",
-    "compile": "rm -r dist; tsc"
+    "compile": "rm -r dist; tsc",
+    "up": "npm update guzek-uk-common"
   },
   "repository": {
     "type": "git",
@@ -22,6 +23,7 @@
     "url": "https://github.com/kguzek/guzek-uk-auth-server/issues"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "express": "^4.21.2",
     "guzek-uk-common": "latest",
@@ -29,6 +31,7 @@
     "uuid": "^11.0.3"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/uuid": "^10.0.0",
     "nodemon": "^3.1.9",
