@@ -6,11 +6,52 @@ import { Token, User } from "guzek-uk-common/sequelize";
 import { queryDatabase, sendError, sendOK } from "guzek-uk-common/util";
 
 import password from "s-salt-pepper";
-import { Response } from "express";
+import { CookieOptions, Response } from "express";
 import { getPrivateKey, getRefreshSecret } from "./keys";
 
 /** The number of milliseconds a newly-generated access token should be valid for. */
 const TOKEN_VALID_FOR_MS = 30 * 60 * 1000; // 30 mins
+/** The number of milliseconds a newly-generated refresh token should be valid for. */
+const REFRESH_TOKEN_VALID_FOR_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/** Set or clear a cookie in the response. */
+function setCookie(
+  res: Response,
+  name: string,
+  ...[value, maxAge]: [] | [string, number]
+) {
+  const options: CookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV !== "development",
+    sameSite: "none",
+    maxAge,
+    path: "/",
+  };
+  if (value && maxAge) {
+    res.cookie(name, value, options);
+  } else {
+    res.clearCookie(name, options);
+  }
+  // For cross-origin authentication requests, e.g. from "www.guzek.uk" to "auth.guzek.uk"
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+}
+
+/** Clear the access and refresh tokens from the response. */
+export function clearTokenCookies(res: Response) {
+  setCookie(res, "access_token");
+  setCookie(res, "refresh_token");
+}
+
+/** Set the access and refresh tokens as HTTP-only cookies in the response. */
+export function setTokenCookies(
+  res: Response,
+  accessToken: string,
+  refreshToken?: string
+) {
+  setCookie(res, "access_token", accessToken, TOKEN_VALID_FOR_MS);
+  if (!refreshToken) return;
+  setCookie(res, "refresh_token", refreshToken, REFRESH_TOKEN_VALID_FOR_MS);
+}
 
 /** Authenticate given password against the stored credentials in the database. */
 export async function authenticateUser(
@@ -51,5 +92,6 @@ export function sendNewTokens(res: Response, user: UserObj) {
   const accessToken = generateAccessToken(user);
   const refreshToken = jwt.sign(user, getRefreshSecret());
   Token.create({ value: refreshToken }).then();
+  setTokenCookies(res, accessToken.accessToken, refreshToken);
   sendOK(res, { ...user, ...accessToken, refreshToken }, 201);
 }

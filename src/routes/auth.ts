@@ -20,8 +20,10 @@ import { getLogger } from "guzek-uk-common/logger";
 import password from "s-salt-pepper";
 import {
   authenticateUser,
+  clearTokenCookies,
   generateAccessToken,
   sendNewTokens,
+  setTokenCookies,
 } from "../tokens";
 import { removeSensitiveData, sendUsers } from "../users";
 import { getRefreshSecret } from "../keys";
@@ -191,20 +193,34 @@ router.post("/tokens", async (req: Request, res: Response) => {
   sendNewTokens(res, userData);
 });
 
-// DELETE refresh token
-router.delete("/tokens/:token", async (req: Request, res: Response) => {
+async function deleteRefreshToken(res: Response, refreshToken: string) {
   const reject = (message: string) => sendError(res, 400, { message });
-  const refreshToken = req.params.token;
   if (!refreshToken) return void reject("No refresh token provided.");
+  verify(refreshToken, getRefreshSecret(), (err, user) => {
+    if (err || !(user as UserObj | undefined)?.uuid)
+      return reject("Invalid or expired refresh token.");
+    clearTokenCookies(res);
+    deleteDatabaseEntry(Token, { value: refreshToken }, res);
+  });
+}
 
-  await deleteDatabaseEntry(Token, { value: refreshToken }, res);
+// DELETE refresh token using body or cookies
+router.delete("/tokens", (req: Request, res: Response) => {
+  const refreshToken = req.body.token || req.cookies.refresh_token;
+  deleteRefreshToken(res, refreshToken);
+});
+
+// DELETE refresh token using path (deprecated)
+router.delete("/tokens/:token", (req: Request, res: Response) => {
+  const refreshToken = req.params.token;
+  deleteRefreshToken(res, refreshToken);
 });
 
 // CREATE new access JWT
 router.post("/refresh", async (req: Request, res: Response) => {
   const reject = (message: string) => sendError(res, 400, { message });
 
-  const refreshToken = req.body.token;
+  const refreshToken = req.body.token || req.cookies.refresh_token;
   if (!refreshToken) return reject("No refresh token provided.");
   const tokens = await queryDatabase(
     Token,
@@ -216,7 +232,8 @@ router.post("/refresh", async (req: Request, res: Response) => {
   if (!tokens) return;
   verify(refreshToken as string, getRefreshSecret(), (err, user) => {
     if (err) return reject("Invalid or expired refresh token.");
-
-    sendOK(res, generateAccessToken(user as UserObj), 201);
+    const accessToken = generateAccessToken(user as UserObj);
+    setTokenCookies(res, accessToken.accessToken);
+    sendOK(res, accessToken, 201);
   });
 });
