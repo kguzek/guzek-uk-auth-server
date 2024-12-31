@@ -11,7 +11,6 @@ import { router as wellKnownRouter } from "./src/routes/.well-known";
 import { allowCredentialsCors } from "./src/middleware/credentials";
 
 const logger = getLogger(__filename);
-console.log(Object.keys(logger));
 
 const app = express();
 
