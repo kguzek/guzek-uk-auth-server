@@ -244,6 +244,6 @@ router.post("/refresh", async (req: Request, res: Response) => {
     const user = payload as UserObj;
     const accessToken = generateAccessToken(user);
     setTokenCookies(user, res, accessToken.accessToken);
-    sendOK(res, accessToken, 201);
+    sendOK(res, { ...accessToken, user }, 201);
   });
 });
