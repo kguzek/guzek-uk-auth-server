@@ -8,6 +8,7 @@ import {
   deleteDatabaseEntry,
   sendError,
   sendOK,
+  findUnique,
 } from "guzek-uk-common/util";
 import {
   UserShows,
@@ -97,13 +98,19 @@ router.get("/users", (_req: Request, res: Response) => {
 // READ specific user by search query
 router.get("/users", async (req: Request, res: Response) => {
   const results = await queryDatabase(User, { where: req.query }, res);
-  if (results) sendOK(res, removeSensitiveData(results)[0]);
+  if (results) sendOK(res, removeSensitiveData(results[0]));
 });
 
 // READ specific user by uuid
 router.get("/users/:uuid", async (req: Request, res: Response) => {
-  const results = await queryDatabase(User, { where: req.params }, res);
-  if (results) sendOK(res, removeSensitiveData(results));
+  const user = await findUnique(User, req.params.uuid);
+  if (!user) {
+    sendError(res, 404, {
+      message: `There is no user with uuid '${req.params.uuid}'.`,
+    });
+    return;
+  }
+  sendOK(res, removeSensitiveData(user));
 });
 
 // UPDATE existing user details
@@ -188,18 +195,20 @@ router.get("/usernames", (_req: Request, res: Response) => {
 router.post("/tokens", async (req: Request, res: Response) => {
   const reject = (message: string) => sendError(res, 400, { message });
 
-  const { password: pw, email } = req.body;
+  const { password, email } = req.body;
 
   if (!email) return reject("Email not provided.");
 
   let userData;
   try {
-    userData = await authenticateUser(res, { email }, pw);
+    userData = await authenticateUser(res, { email }, password);
   } catch (err) {
     return void reject((err as Error).message);
   }
   if (!userData) return;
-  sendNewTokens(res, userData);
+  const user = await findUnique(User, userData.uuid);
+  if (!user) return;
+  sendNewTokens(res, removeSensitiveData(user));
 });
 
 async function deleteRefreshToken(res: Response, refreshToken: string) {
