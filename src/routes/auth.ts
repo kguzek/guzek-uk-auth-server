@@ -113,6 +113,17 @@ router.get("/users/:uuid", async (req: Request, res: Response) => {
   sendOK(res, removeSensitiveData(user));
 });
 
+function getUserQuery(req: CustomRequest) {
+  if (req.params.uuid === "me") {
+    if (!req.user) {
+      logger.error("Unauthenticated user accessed /auth/users/me endpoint.");
+      throw new Error("Security breach in /auth/users/me");
+    }
+    return { uuid: req.user.uuid };
+  }
+  return { uuid: req.params.uuid };
+}
+
 // UPDATE existing user details
 router.put(
   "/users/:uuid/details",
@@ -131,7 +142,7 @@ router.put(
       });
     }
 
-    await updateDatabaseEntry(User, req, res);
+    await updateDatabaseEntry(User, req, res, req.body, getUserQuery(req));
   }
 );
 
@@ -148,7 +159,7 @@ router.put(
       try {
         const success = await authenticateUser(
           res,
-          req.params,
+          getUserQuery(req),
           req.body.oldPassword
         );
         if (!success) return;
