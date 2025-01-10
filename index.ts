@@ -17,7 +17,7 @@ const app = express();
 async function initialise() {
   const iterations = process.env.HASH_ITERATIONS;
   if (!iterations) {
-    logger.error("No HASH_ITERATIONS environment variable set.");
+    logger.crit("No HASH_ITERATIONS environment variable set.");
     return;
   }
 

@@ -189,10 +189,10 @@ router.delete("/users/:uuid", async (req: Request, res: Response) => {
       message: "User UUID must be provided in request path.",
     });
   try {
-    await deleteDatabaseEntry(UserShows, { userUUID: uuid });
-    await deleteDatabaseEntry(WatchedEpisodes, { userUUID: uuid });
+    await deleteDatabaseEntry(UserShows, { userUuid: uuid });
+    await deleteDatabaseEntry(WatchedEpisodes, { userUuid: uuid });
   } catch (error) {
-    logger.error(`Could not delete user-associated entries: ${error}`);
+    logger.error(`Could not delete user-associated entries:`, error);
   }
   await deleteDatabaseEntry(User, { uuid }, res);
 });
