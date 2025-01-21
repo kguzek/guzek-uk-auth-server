@@ -1,12 +1,12 @@
 {
   "name": "guzek-uk-auth-server",
-  "version": "1.0.2",
+  "version": "2.0.1",
   "description": "An authentication and authorization server for the Guzek UK website.",
   "author": "Konrad Guzek",
   "homepage": "https://auth.guzek.uk/",
   "license": "AGPL-3.0",
   "engines": {
-    "node": ">=22.3.0"
+    "node": "^22.3.0"
   },
   "main": "index.ts",
   "scripts": {

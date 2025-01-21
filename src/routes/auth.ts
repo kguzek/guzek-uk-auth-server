@@ -1,6 +1,8 @@
-import express, { Request, Response } from "express";
+import express from "express";
+import type { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { verify } from "jsonwebtoken";
+import type { JwtPayload } from "jsonwebtoken";
 import {
   createDatabaseEntry,
   queryDatabase,
@@ -16,7 +18,7 @@ import {
   User,
   WatchedEpisodes,
 } from "guzek-uk-common/sequelize";
-import { CustomRequest, UserObj } from "guzek-uk-common/models";
+import type { CustomRequest, UserObj } from "guzek-uk-common/models";
 import { getLogger } from "guzek-uk-common/logger";
 import password from "s-salt-pepper";
 import {
@@ -40,6 +42,15 @@ const ADMIN_ONLY_USER_PROPERTIES = [
   "created_at",
   "modified_at",
 ];
+
+const JWT_PAYLOAD_USER_PROPERTIES = [
+  "uuid",
+  "username",
+  "email",
+  "admin",
+] as const;
+
+const EMAIL_REGEX = /^[^@]+@[^@]+\.[^@]+$/;
 
 // CREATE new account
 router.post("/users", async (req: Request, res: Response) => {
@@ -202,19 +213,25 @@ router.get("/usernames", (_req: Request, res: Response) => {
   sendUsers(res, true);
 });
 
-// CREATE refresh token
+// CREATE refresh token (log in)
 router.post("/tokens", async (req: Request, res: Response) => {
   const reject = (message: string) => sendError(res, 400, { message });
 
-  const { password, email } = req.body;
+  const { password, email, login } = req.body;
 
-  if (!email) return reject("Email not provided.");
+  if (!login && !email) return reject("Login not provided.");
 
+  const query = email
+    ? { email }
+    : EMAIL_REGEX.test(login)
+    ? { email: login }
+    : { username: login };
   let userData;
   try {
-    userData = await authenticateUser(res, { email }, password);
-  } catch (err) {
-    return void reject((err as Error).message);
+    userData = await authenticateUser(res, query, password);
+  } catch (error) {
+    if (!(error instanceof Error)) throw error;
+    return void reject(error.message);
   }
   if (!userData) return;
   const user = await findUnique(User, userData.uuid);
@@ -224,9 +241,12 @@ router.post("/tokens", async (req: Request, res: Response) => {
 
 async function deleteRefreshToken(res: Response, refreshToken: string) {
   const reject = (message: string) => sendError(res, 400, { message });
-  if (!refreshToken) return void reject("No refresh token provided.");
-  verify(refreshToken, getRefreshSecret(), (err, user) => {
-    if (err || !(user as UserObj | undefined)?.uuid)
+  if (!refreshToken) {
+    reject("No refresh token provided.");
+    return;
+  }
+  verify(refreshToken, getRefreshSecret(), (err, payload) => {
+    if (err || !isUserObj(payload))
       return reject("Invalid or expired refresh token.");
     clearTokenCookies(res);
     deleteDatabaseEntry(Token, { value: refreshToken }, res);
@@ -245,6 +265,13 @@ router.delete("/tokens/:token", (req: Request, res: Response) => {
   deleteRefreshToken(res, refreshToken);
 });
 
+const isUserObj = (
+  payload: string | JwtPayload | undefined
+): payload is UserObj =>
+  typeof payload === "object" &&
+  payload != null &&
+  JWT_PAYLOAD_USER_PROPERTIES.every((key) => key in payload);
+
 // CREATE new access JWT
 router.post("/refresh", async (req: Request, res: Response) => {
   const reject = (message: string) => sendError(res, 400, { message });
@@ -259,11 +286,23 @@ router.post("/refresh", async (req: Request, res: Response) => {
     }
   );
   if (!tokens) return;
-  verify(refreshToken as string, getRefreshSecret(), (err, payload) => {
+  verify(refreshToken as string, getRefreshSecret(), async (err, payload) => {
     if (err) return reject("Invalid or expired refresh token.");
-    const user = payload as UserObj;
-    const accessToken = generateAccessToken(user);
-    setTokenCookies(user, res, accessToken.accessToken);
-    sendOK(res, { ...accessToken, user }, 201);
+    if (!isUserObj(payload)) {
+      return sendError(res, 400, {
+        message: "The refresh token payload does not contain a user object.",
+      });
+    }
+    // Ensure the access token has the latest user details
+    const user = await findUnique(User, payload.uuid);
+    if (!user) {
+      return sendError(res, 400, {
+        message:
+          "The refresh token was issued to a user who has since been deleted.",
+      });
+    }
+    const { accessToken, expiresAt } = generateAccessToken(user);
+    setTokenCookies(res, accessToken);
+    sendOK(res, { accessToken, expiresAt, user }, 201);
   });
 });

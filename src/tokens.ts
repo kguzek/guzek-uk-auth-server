@@ -1,5 +1,5 @@
 import { WhereOptions } from "sequelize";
-import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 
 import { UserObj } from "guzek-uk-common/models";
 import { Token, User } from "guzek-uk-common/sequelize";
@@ -46,12 +46,10 @@ export function clearTokenCookies(res: Response) {
 
 /** Set the access and refresh tokens as HTTP-only cookies in the response. */
 export function setTokenCookies(
-  user: UserObj,
   res: Response,
   accessToken: string,
   refreshToken?: string
 ) {
-  setCookie(res, "user", JSON.stringify(user), TOKEN_VALID_FOR_MS);
   setCookie(res, "access_token", accessToken, TOKEN_VALID_FOR_MS);
   if (!refreshToken) return;
   setCookie(res, "refresh_token", refreshToken, REFRESH_TOKEN_VALID_FOR_MS);
@@ -87,15 +85,17 @@ export function generateAccessToken(user: UserObj) {
     header: { kid: "v1", alg: "RS256" },
   } satisfies SignOptions;
   const accessToken = jwt.sign(payload, getPrivateKey(), signOptions);
-  const tokenInfo = jwt.decode(accessToken) as JwtPayload;
+  const tokenInfo = jwt.decode(accessToken);
+  if (!tokenInfo) throw Error("Failed to decode access token.");
+  if (typeof tokenInfo === "string") throw Error("Token info is a string.");
   return { accessToken, expiresAt: tokenInfo.exp };
 }
 
 /** Send new access and refresh tokens to the client. Called when logging in or creating a new account. */
 export function sendNewTokens(res: Response, user: UserObj) {
-  const accessToken = generateAccessToken(user);
+  const { accessToken, expiresAt } = generateAccessToken(user);
   const refreshToken = jwt.sign(user, getRefreshSecret());
   Token.create({ value: refreshToken }).then();
-  setTokenCookies(user, res, accessToken.accessToken, refreshToken);
-  sendOK(res, { ...user, ...accessToken, refreshToken }, 201);
+  setTokenCookies(res, accessToken, refreshToken);
+  sendOK(res, { ...user, accessToken, expiresAt, refreshToken }, 201);
 }
