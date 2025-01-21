@@ -1,11 +1,10 @@
 import express from "express";
 import password from "s-salt-pepper";
-import { setupEnvironment } from "guzek-uk-common/setup";
+import { setupEnvironment } from "guzek-uk-common/lib/setup";
 const debugMode = setupEnvironment();
-import { getLogger } from "guzek-uk-common/logger";
+import { getLogger } from "guzek-uk-common/lib/logger";
 import { getMiddleware } from "guzek-uk-common/middleware";
-import { startServer } from "guzek-uk-common/server";
-import { send405 } from "guzek-uk-common/util";
+import { startServer, send405 } from "guzek-uk-common/lib/server";
 import { router as authRouter } from "./src/routes/auth";
 import { router as wellKnownRouter } from "./src/routes/.well-known";
 import { allowCredentialsCors } from "./src/middleware/credentials";

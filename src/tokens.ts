@@ -2,8 +2,9 @@ import { WhereOptions } from "sequelize";
 import jwt, { SignOptions } from "jsonwebtoken";
 
 import { UserObj } from "guzek-uk-common/models";
-import { Token, User } from "guzek-uk-common/sequelize";
-import { queryDatabase, sendError, sendOK } from "guzek-uk-common/util";
+import { Token, User } from "guzek-uk-common/lib/sequelize";
+import { queryDatabase } from "guzek-uk-common/lib/rest";
+import { sendError, sendOK } from "guzek-uk-common/lib/http";
 
 import password from "s-salt-pepper";
 import { CookieOptions, Response } from "express";

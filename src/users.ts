@@ -1,7 +1,8 @@
 import { Response } from "express";
 import type { UserObj } from "guzek-uk-common/models";
-import { User } from "guzek-uk-common/sequelize";
-import { readAllDatabaseEntries, sendOK } from "guzek-uk-common/util";
+import { User } from "guzek-uk-common/lib/sequelize";
+import { readAllDatabaseEntries } from "guzek-uk-common/lib/rest";
+import { sendOK } from "guzek-uk-common/lib/http";
 
 function sanitiseUser(user: User): UserObj {
   const { hash, salt, ...publicProperties } = user.get();

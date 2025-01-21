@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { sendOK } from "guzek-uk-common/util";
+import { sendOK } from "guzek-uk-common/lib/http";
 import { getPublicKey } from "../keys";
 
 export const router = Router();

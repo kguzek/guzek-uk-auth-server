@@ -9,18 +9,17 @@ import {
   queryDatabase,
   updateDatabaseEntry,
   deleteDatabaseEntry,
-  sendError,
-  sendOK,
   findUnique,
-} from "guzek-uk-common/util";
+} from "guzek-uk-common/lib/rest";
+import { sendError, sendOK } from "guzek-uk-common/lib/http";
 import {
   UserShows,
   Token,
   User,
   WatchedEpisodes,
-} from "guzek-uk-common/sequelize";
+} from "guzek-uk-common/lib/sequelize";
 import type { CustomRequest, UserObj } from "guzek-uk-common/models";
-import { getLogger } from "guzek-uk-common/logger";
+import { getLogger } from "guzek-uk-common/lib/logger";
 import password from "s-salt-pepper";
 import {
   authenticateUser,
