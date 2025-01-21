@@ -1,6 +1,7 @@
 import express from "express";
 import type { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
+import { Op } from "sequelize";
 import { verify } from "jsonwebtoken";
 import type { JwtPayload } from "jsonwebtoken";
 import {
@@ -51,6 +52,7 @@ const JWT_PAYLOAD_USER_PROPERTIES = [
 ] as const;
 
 const EMAIL_REGEX = /^[^@]+@[^@]+\.[^@]+$/;
+const USERNAME_REGEX = /^[a-zA-Z0-9-_\.]{2,}[a-zA-Z0-9]$/;
 
 // CREATE new account
 router.post("/users", async (req: Request, res: Response) => {
@@ -61,20 +63,35 @@ router.post("/users", async (req: Request, res: Response) => {
       });
     }
   }
-  // Check for existing entries
-  const results = await queryDatabase(User, {
-    where: { email: req.body.email },
-  });
 
-  if (results?.shift()) {
+  if (!EMAIL_REGEX.test(req.body.email)) {
     return sendError(res, 400, {
-      message: "A user with that email address already exists.",
+      message: "Invalid email address format.",
     });
   }
-  // Hash password
-  const credentials: { hash: string; salt: string } = await password.hash(
-    req.body.password
-  );
+
+  if (!USERNAME_REGEX.test(req.body.username)) {
+    return sendError(res, 400, {
+      message:
+        "Username must: be at least three characters long; contain only letters, numbers, underscores, hyphens, and dots; and end with a letter or number.",
+    });
+  }
+
+  // Check for existing entries
+  const results = await queryDatabase(User, {
+    where: {
+      [Op.or]: [{ email: req.body.email }, { username: req.body.username }],
+    },
+  });
+  const existingUser = results?.shift();
+
+  if (existingUser != null) {
+    const taken = existingUser.email === req.body.email ? "email" : "username";
+    return sendError(res, 400, {
+      message: `That ${taken} is taken.`,
+    });
+  }
+  const credentials = await password.hash(req.body.password);
 
   await createDatabaseEntry(
     User,
