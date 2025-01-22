@@ -8,13 +8,15 @@ function sanitiseUser(user: User): UserObj {
   const { hash, salt, ...publicProperties } = user.get();
   return publicProperties;
 }
-
+/** Converts the database record or records into an object or array of objects without hash or salt properties. */
 export function removeSensitiveData<T extends User | User[]>(
-  data: T
+  record: T
 ): T extends User ? UserObj : UserObj[];
 
-export function removeSensitiveData(data: User | User[]) {
-  return Array.isArray(data) ? data.map(sanitiseUser) : sanitiseUser(data);
+export function removeSensitiveData(record: User | User[]) {
+  return Array.isArray(record)
+    ? record.map(sanitiseUser)
+    : sanitiseUser(record);
 }
 
 export const sendUsers = (res: Response, returnOnlyUsernames: boolean) =>

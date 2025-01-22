@@ -102,8 +102,7 @@ router.post("/users", async (req: Request, res: Response) => {
     },
     res,
     (_res: Response, record: User) => {
-      const { hash, salt, ...userData } = record.get();
-      sendNewTokens(res, userData);
+      sendNewTokens(res, removeSensitiveData(record));
     }
   );
 });
@@ -310,13 +309,14 @@ router.post("/refresh", async (req: Request, res: Response) => {
       });
     }
     // Ensure the access token has the latest user details
-    const user = await findUnique(User, payload.uuid);
-    if (!user) {
+    const userRecord = await findUnique(User, payload.uuid);
+    if (!userRecord) {
       return sendError(res, 400, {
         message:
           "The refresh token was issued to a user who has since been deleted.",
       });
     }
+    const user = removeSensitiveData(userRecord);
     const { accessToken, expiresAt } = generateAccessToken(user);
     setTokenCookies(res, accessToken);
     sendOK(res, { accessToken, expiresAt, user }, 201);
