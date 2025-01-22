@@ -69,12 +69,12 @@ export async function authenticateUser(
     const property = Object.keys(where).shift();
     sendError(res, 400, { message: `Invalid ${property}.` });
   });
-  if (!records) return;
+  if (!records) return null;
   const userRecord = records[0];
   const { hash, salt, ...userDetails } = userRecord.get();
   const isValid = await password.compare(pw, { hash, salt });
   if (!isValid) throw Error("Invalid password.");
-  return userDetails;
+  return userDetails as UserObj;
 }
 
 /** Generate a new access token. Called when logging in, creating a new account, or refreshing a previous token. */

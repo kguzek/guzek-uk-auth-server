@@ -36,12 +36,7 @@ const logger = getLogger(__filename);
 
 const MODIFIABLE_USER_PROPERTIES = ["username", "email", "serverUrl"];
 
-const ADMIN_ONLY_USER_PROPERTIES = [
-  "uuid",
-  "admin",
-  "created_at",
-  "modified_at",
-];
+const ADMIN_ONLY_USER_PROPERTIES = ["uuid", "admin"];
 
 const JWT_PAYLOAD_USER_PROPERTIES = [
   "uuid",
@@ -156,12 +151,12 @@ router.put(
   async (req: CustomRequest, res: Response) => {
     for (const property in req.body) {
       if (MODIFIABLE_USER_PROPERTIES.includes(property)) continue;
-      if (!req.user?.admin) {
+      if (ADMIN_ONLY_USER_PROPERTIES.includes(property)) {
+        if (req.user?.admin) continue;
         return sendError(res, 403, {
           message: `Protected user property '${property}'.`,
         });
       }
-      if (ADMIN_ONLY_USER_PROPERTIES.includes(property)) continue;
 
       return sendError(res, 400, {
         message: `Unmodifiable user property '${property}'.`,
@@ -178,6 +173,8 @@ router.put(
   async (req: CustomRequest, res: Response) => {
     const reject = (message: string) => sendError(res, 400, { message });
 
+    const query = getUserQuery(req);
+
     if (!req.user?.admin) {
       if (!req.body.oldPassword) return reject("Old password not provided.");
 
@@ -185,25 +182,20 @@ router.put(
       try {
         const success = await authenticateUser(
           res,
-          getUserQuery(req),
+          query,
           req.body.oldPassword
         );
         if (!success) return;
       } catch (error) {
-        const { message } = error as Error;
+        if (!(error instanceof Error)) throw error;
+        const { message } = error;
         // Update the error message to better reflect the situation
         return reject(message.replace(/^Password/, "Old password"));
       }
     }
 
-    const credentials: { hash: string; salt: string } = await password.hash(
-      req.body.newPassword
-    );
-    await updateDatabaseEntry(
-      User,
-      { params: req.params, body: credentials } as Request,
-      res
-    );
+    const credentials = await password.hash(req.body.newPassword);
+    await updateDatabaseEntry(User, req, res, query, credentials);
   }
 );
 
@@ -236,6 +228,7 @@ router.post("/tokens", async (req: Request, res: Response) => {
 
   if (!login && !email) return reject("Login not provided.");
 
+  // Supports 'email' key for backwards compatibility
   const query = email
     ? { email }
     : EMAIL_REGEX.test(login)
