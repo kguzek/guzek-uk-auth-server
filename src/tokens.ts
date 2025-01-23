@@ -34,14 +34,13 @@ function setCookie(
   } else {
     res.clearCookie(name, options);
   }
-  // For cross-origin authentication requests, e.g. from "www.guzek.uk" to "auth.guzek.uk"
-  res.setHeader("Access-Control-Allow-Credentials", "true");
 }
 
 /** Clear the access and refresh tokens from the response. */
 export function clearTokenCookies(res: Response) {
   setCookie(res, "access_token");
   setCookie(res, "refresh_token");
+  // Backwards compatibility with old cookie name
   setCookie(res, "user");
 }
 

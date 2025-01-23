@@ -163,7 +163,14 @@ router.put(
       });
     }
 
-    await updateDatabaseEntry(User, req, res, req.body, getUserQuery(req));
+    await updateDatabaseEntry(
+      User,
+      req,
+      res,
+      req.body,
+      getUserQuery(req),
+      "/profile"
+    );
   }
 );
 
@@ -195,24 +202,29 @@ router.put(
     }
 
     const credentials = await password.hash(req.body.newPassword);
-    await updateDatabaseEntry(User, req, res, query, credentials);
+    await updateDatabaseEntry(User, req, res, credentials, query, "/profile");
   }
 );
 
 // DELETE existing user
-router.delete("/users/:uuid", async (req: Request, res: Response) => {
-  const uuid = req.params.uuid;
-  if (!uuid)
+router.delete("/users/:uuid", async (req: CustomRequest, res: Response) => {
+  const query = getUserQuery(req);
+  if (!query.uuid)
     return sendError(res, 400, {
       message: "User UUID must be provided in request path.",
     });
   try {
-    await deleteDatabaseEntry(UserShows, { userUuid: uuid });
-    await deleteDatabaseEntry(WatchedEpisodes, { userUuid: uuid });
+    await deleteDatabaseEntry(UserShows, { userUuid: query.uuid });
+    await deleteDatabaseEntry(WatchedEpisodes, { userUuid: query.uuid });
   } catch (error) {
     logger.error(`Could not delete user-associated entries:`, error);
   }
-  await deleteDatabaseEntry(User, { uuid }, res);
+  let redirect = "/admin/users";
+  if (query.uuid === req.user?.uuid) {
+    redirect = "/login";
+    clearTokenCookies(res);
+  }
+  await deleteDatabaseEntry(User, query, res, req, redirect);
 });
 
 // READ all usernames

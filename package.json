@@ -1,6 +1,6 @@
 {
   "name": "guzek-uk-auth-server",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "An authentication and authorization server for the Guzek UK website.",
   "author": "Konrad Guzek",
   "homepage": "https://auth.guzek.uk/",
