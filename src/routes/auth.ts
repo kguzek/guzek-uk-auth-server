@@ -97,7 +97,7 @@ router.post("/users", async (req: Request, res: Response) => {
     },
     res,
     (_res: Response, record: User) => {
-      sendNewTokens(res, removeSensitiveData(record));
+      sendNewTokens(req, res, removeSensitiveData(record));
     }
   );
 });
@@ -244,10 +244,14 @@ router.post("/tokens", async (req: Request, res: Response) => {
   if (!userData) return;
   const user = await findUnique(User, userData.uuid);
   if (!user) return;
-  sendNewTokens(res, removeSensitiveData(user));
+  sendNewTokens(req, res, removeSensitiveData(user));
 });
 
-async function deleteRefreshToken(res: Response, refreshToken: string) {
+async function deleteRefreshToken(
+  req: Request,
+  res: Response,
+  refreshToken: string
+) {
   const reject = (message: string) => sendError(res, 400, { message });
   if (!refreshToken) {
     reject("No refresh token provided.");
@@ -257,20 +261,20 @@ async function deleteRefreshToken(res: Response, refreshToken: string) {
     if (err || !isUserObj(payload))
       return reject("Invalid or expired refresh token.");
     clearTokenCookies(res);
-    deleteDatabaseEntry(Token, { value: refreshToken }, res);
+    deleteDatabaseEntry(Token, { value: refreshToken }, res, req, "/login");
   });
 }
 
 // DELETE refresh token using body or cookies
 router.delete("/tokens", (req: Request, res: Response) => {
   const refreshToken = req.body.token || req.cookies.refresh_token;
-  deleteRefreshToken(res, refreshToken);
+  deleteRefreshToken(req, res, refreshToken);
 });
 
 // DELETE refresh token using path (deprecated)
 router.delete("/tokens/:token", (req: Request, res: Response) => {
   const refreshToken = req.params.token;
-  deleteRefreshToken(res, refreshToken);
+  deleteRefreshToken(req, res, refreshToken);
 });
 
 const isUserObj = (

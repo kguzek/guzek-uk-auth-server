@@ -7,7 +7,7 @@ import { queryDatabase } from "guzek-uk-common/lib/rest";
 import { sendError, sendOK } from "guzek-uk-common/lib/http";
 
 import password from "s-salt-pepper";
-import { CookieOptions, Response } from "express";
+import { CookieOptions, Request, Response } from "express";
 import { getPrivateKey, getRefreshSecret } from "./keys";
 
 /** The number of milliseconds a newly-generated access token should be valid for. */
@@ -93,10 +93,16 @@ export function generateAccessToken(user: UserObj) {
 }
 
 /** Send new access and refresh tokens to the client. Called when logging in or creating a new account. */
-export function sendNewTokens(res: Response, user: UserObj) {
+export function sendNewTokens(req: Request, res: Response, user: UserObj) {
   const { accessToken, expiresAt } = generateAccessToken(user);
   const refreshToken = jwt.sign(user, getRefreshSecret());
   Token.create({ value: refreshToken }).then();
   setTokenCookies(res, accessToken, refreshToken);
-  sendOK(res, { ...user, accessToken, expiresAt, refreshToken }, 201);
+  sendOK(
+    res,
+    { ...user, accessToken, expiresAt, refreshToken },
+    201,
+    req,
+    "/profile"
+  );
 }
