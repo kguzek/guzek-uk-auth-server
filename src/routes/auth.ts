@@ -163,14 +163,21 @@ router.put(
       });
     }
 
-    await updateDatabaseEntry(
-      User,
-      req,
-      res,
-      req.body,
-      getUserQuery(req),
-      "/profile"
-    );
+    const query = getUserQuery(req);
+
+    for (const uniqueProperty of ["username", "email"]) {
+      const value = req.body[uniqueProperty];
+      if (!value) continue;
+      const result = await User.findOne({
+        where: { [uniqueProperty]: value, uuid: { [Op.ne]: query.uuid } },
+      });
+      if (result == null) continue;
+      return sendError(res, 400, {
+        message: `That ${uniqueProperty} is already taken by another user.`,
+      });
+    }
+
+    await updateDatabaseEntry(User, req, res, req.body, query, "/profile");
   }
 );
 
