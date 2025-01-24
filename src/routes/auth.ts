@@ -145,6 +145,27 @@ function getUserQuery(req: CustomRequest) {
   return { uuid: req.params.uuid };
 }
 
+/** Updates the user's database entry sending the appropriate response with the appropriate cookies and headers. */
+async function updateUser(
+  req: CustomRequest,
+  res: Response,
+  query: ReturnType<typeof getUserQuery>,
+  user: Partial<UserObj> | Awaited<ReturnType<typeof password.hash>>
+) {
+  if (query.uuid === req.user?.uuid) {
+    const user = await findUnique(User, query.uuid);
+    if (!user) {
+      sendError(res, 404, {
+        message: `No such user ${query.uuid}.`,
+      });
+      return;
+    }
+    const { accessToken } = generateAccessToken(removeSensitiveData(user));
+    setTokenCookies(res, accessToken);
+  }
+  await updateDatabaseEntry(User, req, res, user, query, "/profile");
+}
+
 // UPDATE existing user details
 router.put(
   "/users/:uuid/details",
@@ -177,7 +198,7 @@ router.put(
       });
     }
 
-    await updateDatabaseEntry(User, req, res, req.body, query, "/profile");
+    await updateUser(req, res, query, req.body);
   }
 );
 
@@ -209,7 +230,7 @@ router.put(
     }
 
     const credentials = await password.hash(req.body.newPassword);
-    await updateDatabaseEntry(User, req, res, credentials, query, "/profile");
+    await updateUser(req, res, query, credentials);
   }
 );
 
@@ -262,7 +283,10 @@ router.post("/tokens", async (req: Request, res: Response) => {
   }
   if (!userData) return;
   const user = await findUnique(User, userData.uuid);
-  if (!user) return;
+  if (!user) {
+    reject(`Invalid user ${userData.uuid}.`);
+    return;
+  }
   sendNewTokens(req, res, removeSensitiveData(user));
 });
 
