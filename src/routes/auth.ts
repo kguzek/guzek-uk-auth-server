@@ -327,11 +327,22 @@ const isUserObj = (
   payload != null &&
   JWT_PAYLOAD_USER_PROPERTIES.every((key) => key in payload);
 
+async function getTokenAudience(audienceUuid?: string) {
+  if (!audienceUuid) return undefined;
+  const user = await findUnique(User, audienceUuid);
+  if (!user) throw new Error(`Invalid user UUID ${audienceUuid}.`);
+  const serverUrl = user.get("serverUrl");
+  if (!serverUrl)
+    throw new Error(`User ${audienceUuid} has no audience server URL.`);
+  return serverUrl;
+}
+
 // CREATE new access JWT
 router.post("/refresh", async (req: Request, res: Response) => {
   const reject = (message: string) => sendError(res, 400, { message });
 
-  const refreshToken = req.body.token || req.cookies.refresh_token;
+  const refreshToken: string | undefined =
+    req.body.token || req.cookies.refresh_token;
   if (!refreshToken) return reject("No refresh token provided.");
   const tokens = await queryDatabase(
     Token,
@@ -341,23 +352,34 @@ router.post("/refresh", async (req: Request, res: Response) => {
     }
   );
   if (!tokens) return;
-  verify(refreshToken as string, getRefreshSecret(), async (err, payload) => {
+  verify(refreshToken, getRefreshSecret(), async (err, payload) => {
     if (err) return reject("Invalid or expired refresh token.");
     if (!isUserObj(payload)) {
-      return sendError(res, 400, {
-        message: "The refresh token payload does not contain a user object.",
-      });
+      reject("The refresh token payload does not contain a user object.");
+      return;
     }
     // Ensure the access token has the latest user details
     const userRecord = await findUnique(User, payload.uuid);
     if (!userRecord) {
-      return sendError(res, 400, {
-        message:
-          "The refresh token was issued to a user who has since been deleted.",
-      });
+      reject(
+        "The refresh token was issued to a user who has since been deleted."
+      );
+      return;
     }
     const user = removeSensitiveData(userRecord);
-    const { accessToken, expiresAt } = generateAccessToken(user);
+    let audience;
+    try {
+      audience = await getTokenAudience(req.body.audienceUuid);
+    } catch (error) {
+      if (error instanceof Error) return reject(error.message);
+      logger.error("Error determining audience server URL:", error);
+      return reject("Failed to determine audience server URL.");
+    }
+    const { accessToken, expiresAt } = generateAccessToken(
+      user,
+      audience,
+      req.body.expiresIn
+    );
     setTokenCookies(res, accessToken);
     sendOK(res, { accessToken, expiresAt, user }, 201);
   });

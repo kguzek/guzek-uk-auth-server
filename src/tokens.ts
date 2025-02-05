@@ -14,6 +14,7 @@ import { getPrivateKey, getRefreshSecret } from "./keys";
 const TOKEN_VALID_FOR_MS = 30 * 60 * 1000; // 30 mins
 /** The number of milliseconds a newly-generated refresh token should be valid for. */
 const REFRESH_TOKEN_VALID_FOR_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const ACCESS_TOKEN_ISSUER = "https://auth.guzek.uk";
 
 /** Set or clear a cookie in the response. */
 function setCookie(
@@ -77,12 +78,18 @@ export async function authenticateUser(
 }
 
 /** Generate a new access token. Called when logging in, creating a new account, or refreshing a previous token. */
-export function generateAccessToken(user: UserObj) {
+export function generateAccessToken(
+  user: UserObj,
+  audience?: string,
+  expiresIn?: number
+) {
   const payload = { ...user, iat: new Date().getTime() };
   const signOptions = {
-    expiresIn: TOKEN_VALID_FOR_MS,
+    expiresIn: Math.min(expiresIn || TOKEN_VALID_FOR_MS, TOKEN_VALID_FOR_MS),
     algorithm: "RS256",
     header: { kid: "v1", alg: "RS256" },
+    audience,
+    issuer: ACCESS_TOKEN_ISSUER,
   } satisfies SignOptions;
   const accessToken = jwt.sign(payload, getPrivateKey(), signOptions);
   const tokenInfo = jwt.decode(accessToken);
